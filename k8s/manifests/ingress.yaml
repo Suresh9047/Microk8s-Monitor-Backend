@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: boiler-plate-express-rest-ingress
+  namespace: boiler-plate
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - boiler-plate-express-rest.arffy.com
+      secretName: arffy-tls
+  rules:
+    - host: boiler-plate-express-rest.arffy.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: boiler-plate-express-rest-service
+                port:
+                  number: 3000

@@ -1,0 +1,85 @@
+all files are under one root 'src'
+k8s directory is for deployment manifest files
+.gitlab-ci.yml is for Gitlab's CI/CID pipeline
+
+=== For the first time.
+Create migrations:
+setup .sequelizerc file first.(see the file content for explanation.)
+
+npx sequelize-cli model:generate --name Sample --attributes name:string,description:string,pur_price:double,sale_price:double,pur_date:date,stock:integer
+ 
+it will create one file under src/models/Sample.js with class naem Sample inside it.
+in model file:
+
+replace {
+      sequelize,
+      modelName: "Sample",
+    } 
+with 
+{
+      sequelize,
+      modelName: "Sample",
+      tableName: "samples", //table name always all small case
+      timestamps: true,
+      createdAt: "created_at",
+      updatedAt: "modified_at",
+}
+
+
+it will create one migration file under src/migrations directory.
+in all migration files check the 'table name' make it 'all small case' and with '_' if multiple word you want.
+
+in all migration files:
+
+replace 
+createdAt: {
+        allowNull: false,
+        type: Sequelize.DATE,
+      },
+      updatedAt: {
+        allowNull: false,
+        type: Sequelize.DATE,
+      }
+with 
+created_at: {
+        allowNull: false,
+        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+        type: Sequelize.DATE,
+      },
+      created_by: {
+        allowNull: false,
+        defaultValue: 1,
+        type: Sequelize.INTEGER,
+      },
+      modified_at: {
+        allowNull: true,
+        defaultValue: Sequelize.literal("NULL ON UPDATE CURRENT_TIMESTAMP"),
+        type: Sequelize.DATE,
+      },
+      modified_by: {
+        allowNull: true,
+        type: Sequelize.INTEGER,
+      }
+
+===
+After doing the above changes only you should run the migration command:
+==
+Run migration:
+to create tables only (not DB. DB should be there in place already.)
+npx sequelize-cli db:migrate 
+it will run all the migration files under src/migrations directory
+
+to create some sample records initially.(seed records)
+npx sequelize-cli db:seed:all 
+it will run all the seeder files under src/seeders directory
+
+if you see in the DB:
+you will find a new table called 'SequelizeMeta', it is used by sequelize for migrations management.
+===
+
+Run the applicatin:
+in project root directory:
+npm install
+npm run dev
+===
+login details: gsm/1234, user1/1234

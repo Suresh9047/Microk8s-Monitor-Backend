@@ -1,0 +1,39 @@
+{
+  "name": "boiler_plate_express_rest",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js --host 0.0.0.0",
+    "dev": "nodemon app.js --host 0.0.0.0 -L",
+    "db:migrate": "npx sequelize-cli db:migrate --config src/config/config.js",
+    "db:migrate:undo": "npx sequelize-cli db:migrate:undo:all --config src/config/config.js",
+    "db:seed": "npx sequelize-cli db:seed:all --config src/config/config.js",
+    "docker:up": "docker-compose up --build -d",
+    "docker:down": "docker-compose down",
+    "test": "jest --passWithNoTests"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
+    "dayjs": "^1.11.18",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mqtt": "^5.14.1",
+    "multer": "^2.0.2",
+    "mysql2": "^3.14.3",
+    "sequelize": "^6.37.7",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "sequelize-cli": "^6.6.3"
+  }
+}
