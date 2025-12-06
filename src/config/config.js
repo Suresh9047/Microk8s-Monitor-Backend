@@ -20,8 +20,8 @@ module.exports = {
   // },
   development: {
     username: process.env.DB_USER || "root",
-    password: process.env.DB_PASS || "",
-    database: process.env.DB_NAME || "boiler_plate_express_rest",
+    password: process.env.DB_PASS || "razz",
+    database: process.env.DB_NAME || "MonitorApp",
     host: process.env.DB_HOST || "127.0.0.1",
     dialect: "mysql",
     timezone: "+00:00", // Force Sequelize to use UTC

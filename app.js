@@ -16,9 +16,12 @@ const AppError = require("./src/responses/apperror");
 const { error } = require("./src/responses/response");
 
 const allowedOrigins = [
+  "http://0.0.0.0:8001", // local dev (optional)
+  "http://localhost:8001", // local dev (optional)
+  "http://localhost:3000", // local dev (optional)
   "http://localhost:3006", // local dev (optional)
   "http://localhost:8000", // Allow self
-  "http://0.0.0.0:8000",   // Allow self
+  "http://0.0.0.0:8000", // Allow self
   undefined, // allow mobile apps with no Origin
   "null", // some mobile/webviews send 'null'
 ];
