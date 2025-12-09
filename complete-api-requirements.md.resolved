@@ -1,0 +1,629 @@
+# Complete API Requirements for Pod Features
+
+This document maps **exact UI fields** to **required backend API fields**. Use this to implement the backend endpoints.
+
+---
+
+## 🎯 Overview
+
+The frontend displays **3 major pod features**:
+
+1. **Pod List Table** - Shows basic pod information with filters
+2. **Pod Details Modal** - Shows comprehensive pod information in tabs
+3. **Pod Logs Viewer** - Shows container logs with search
+
+Each requires specific API fields to populate the UI correctly.
+
+---
+
+## 📊 Endpoint 1: GET `/api/k8s/pods` - List Pods
+
+### URL
+```
+GET http://localhost:8001/api/k8s/pods
+```
+
+### Query Parameters (Filters)
+
+| Parameter     | Type   | Required | Description                        | Example                                |
+| ------------- | ------ | -------- | ---------------------------------- | -------------------------------------- |
+| `namespace`   | string | No       | Filter by namespace                | `?namespace=default`                   |
+| `phase`       | string | No       | Filter by pod phase                | `?phase=Running`                       |
+| `nodeName`    | string | No       | Filter by node name                | `?nodeName=node-1`                     |
+| `label.{key}` | string | No       | Filter by label (multiple allowed) | `?label.app=nginx&label.version=v1.0` |
+
+### Response Format
+
+**HTTP 200 - Success**
+
+```json
+[
+  {
+    "id": "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6",
+    "name": "nginx-deployment-7d9c8f5b4-xyz12",
+    "namespace": "default",
+    "status": "Active",
+    "phase": "Running",
+    "age": "4d",
+    "cpu": "12m",
+    "memory": "142Mi",
+    "restarts": 0,
+    "nodeName": "node-1"
+  },
+  {
+    "id": "b2c3d4e5-f6g7-8h9i-0j1k-l2m3n4o5p6q7",
+    "name": "redis-cache-849d9b5-abc45",
+    "namespace": "default",
+    "status": "Active",
+    "phase": "Running",
+    "age": "2h",
+    "cpu": "8m",
+    "memory": "96Mi",
+    "restarts": 1,
+    "nodeName": "node-2"
+  }
+]
+```
+
+### Required Fields (Table Display)
+
+| Field Name  | Data Type | Required | Where Shown in UI               | Description                                                 | Example Values                   |
+| ----------- | --------- | -------- | ------------------------------- | ----------------------------------------------------------- | -------------------------------- |
+| [id](file:///home/arffy/playground/monitor/Microk8s-Monitor/src/components/layout/Sidebar.tsx#12-77)        | string    | ✅ Yes   | Internal (key for React)        | Unique identifier (use Kubernetes UID)                      | `"a1b2c3d4..."`                  |
+| `name`      | string    | ✅ Yes   | **Name** column (clickable)     | Pod name from Kubernetes                                    | `"nginx-deployment-7d9c8f5b4-xyz12"` |
+| `namespace` | string    | ✅ Yes   | **Namespace** column            | Kubernetes namespace                                        | `"default"`, `"kube-system"`     |
+| `status`    | string    | ✅ Yes   | **Status** column (badge)       | Display-friendly status                                     | `"Active"`, `"Pending"`, `"Failed"` |
+| `phase`     | string    | ✅ Yes   | Used for filtering              | Kubernetes pod phase                                        | `"Running"`, `"Pending"`, `"Failed"`, `"Succeeded"`, `"Unknown"` |
+| `cpu`       | string    | ✅ Yes   | **CPU** column                  | Current CPU usage (from metrics server)                     | `"12m"`, `"100m"`, `"0m"`        |
+| `memory`    | string    | ✅ Yes   | **Memory** column               | Current memory usage (from metrics server)                  | `"142Mi"`, `"1Gi"`, `"0Mi"`      |
+| `restarts`  | number    | ✅ Yes   | **Restarts** column (badge)     | Total container restart count                               | `0`, `5`, `10`                   |
+| [age](file:///home/arffy/playground/monitor/Microk8s-Monitor/src/app/dashboard/pods/page.tsx#15-249)       | string    | ✅ Yes   | **Age** column                  | Human-readable age                                          | `"4d"`, `"3h"`, `"15m"`, `"30s"` |
+| `nodeName`  | string    | ⚠️ Optional (can be null) | Used for filtering | Node where pod is running | `"node-1"`, `"minikube"`, `null` |
+
+### Status Badge Colors
+
+The UI shows colored badges based on `status` field:
+
+- `"Active"` → Green badge
+- `"Running"` → Green badge  
+- `"Pending"` → Yellow badge
+- `"Failed"` → Red badge
+- `"Succeeded"` → Blue badge
+
+### Restart Count Badge Colors
+
+The UI shows colored badges based on `restarts` count:
+
+- `0` → Green badge (no restarts)
+- `> 0` → Yellow badge (has restarts)
+
+---
+
+## 📋 Endpoint 2: GET `/api/k8s/pods/:namespace/:name` - Pod Details
+
+### URL
+```
+GET http://localhost:8001/api/k8s/pods/:namespace/:name
+```
+
+### URL Parameters
+
+| Parameter   | Required | Description   | Example     |
+| ----------- | -------- | ------------- | ----------- |
+| `namespace` | ✅ Yes   | Pod namespace | `"default"` |
+| `name`      | ✅ Yes   | Pod name      | `"nginx-deployment-7d9c8f5b4-xyz12"` |
+
+### Example Request
+```
+GET http://localhost:8001/api/k8s/pods/default/nginx-deployment-7d9c8f5b4-xyz12
+```
+
+### Response Format
+
+**HTTP 200 - Success**
+
+```json
+{
+  "id": "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6",
+  "name": "nginx-deployment-7d9c8f5b4-xyz12",
+  "namespace": "default",
+  "status": "Active",
+  "phase": "Running",
+  "age": "4d",
+  "cpu": "12m",
+  "memory": "142Mi",
+  "restarts": 0,
+  "nodeName": "node-1",
+  "uid": "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6",
+  "labels": {
+    "app": "nginx",
+    "version": "v1.21.3",
+    "tier": "frontend",
+    "environment": "production"
+  },
+  "annotations": {
+    "kubernetes.io/created-by": "deployment-controller",
+    "prometheus.io/scrape": "true",
+    "prometheus.io/port": "9090"
+  },
+  "conditions": [
+    {
+      "type": "Ready",
+      "status": "True",
+      "lastProbeTime": null,
+      "lastTransitionTime": "2024-12-02T14:30:15Z",
+      "reason": "ContainersReady",
+      "message": "All containers are ready"
+    },
+    {
+      "type": "Initialized",
+      "status": "True",
+      "lastProbeTime": null,
+      "lastTransitionTime": "2024-12-02T14:30:10Z",
+      "reason": "PodInitialized",
+      "message": "Pod has been initialized"
+    },
+    {
+      "type": "ContainersReady",
+      "status": "True",
+      "lastProbeTime": null,
+      "lastTransitionTime": "2024-12-02T14:30:15Z",
+      "reason": "ContainersReady",
+      "message": "All containers are ready"
+    },
+    {
+      "type": "PodScheduled",
+      "status": "True",
+      "lastProbeTime": null,
+      "lastTransitionTime": "2024-12-02T14:30:08Z",
+      "reason": "PodScheduled",
+      "message": "Successfully assigned to node-1"
+    }
+  ],
+  "containers": [
+    {
+      "name": "nginx",
+      "image": "nginx:1.21.3",
+      "state": "running",
+      "ready": true,
+      "restartCount": 0,
+      "ports": [
+        {
+          "name": "http",
+          "containerPort": 80,
+          "protocol": "TCP"
+        },
+        {
+          "name": "https",
+          "containerPort": 443,
+          "protocol": "TCP"
+        }
+      ],
+      "resources": {
+        "requests": {
+          "cpu": "100m",
+          "memory": "128Mi"
+        },
+        "limits": {
+          "cpu": "200m",
+          "memory": "256Mi"
+        }
+      }
+    },
+    {
+      "name": "sidecar-proxy",
+      "image": "envoyproxy/envoy:v1.20.0",
+      "state": "running",
+      "ready": true,
+      "restartCount": 0,
+      "ports": [
+        {
+          "name": "proxy",
+          "containerPort": 15001,
+          "protocol": "TCP"
+        }
+      ],
+      "resources": {
+        "requests": {
+          "cpu": "50m",
+          "memory": "64Mi"
+        },
+        "limits": {
+          "cpu": "100m",
+          "memory": "128Mi"
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "Normal",
+      "reason": "Scheduled",
+      "message": "Successfully assigned default/nginx-deployment-7d9c8f5b4-xyz12 to node-1",
+      "timestamp": "2024-12-02T14:30:08Z",
+      "count": 1
+    },
+    {
+      "type": "Normal",
+      "reason": "Pulling",
+      "message": "Pulling image nginx:1.21.3",
+      "timestamp": "2024-12-02T14:30:09Z",
+      "count": 1
+    },
+    {
+      "type": "Normal",
+      "reason": "Pulled",
+      "message": "Successfully pulled image nginx:1.21.3",
+      "timestamp": "2024-12-02T14:30:12Z",
+      "count": 1
+    },
+    {
+      "type": "Normal",
+      "reason": "Created",
+      "message": "Created container nginx",
+      "timestamp": "2024-12-02T14:30:13Z",
+      "count": 1
+    },
+    {
+      "type": "Normal",
+      "reason": "Started",
+      "message": "Started container nginx",
+      "timestamp": "2024-12-02T14:30:14Z",
+      "count": 1
+    },
+    {
+      "type": "Warning",
+      "reason": "BackOff",
+      "message": "Back-off restarting failed container",
+      "timestamp": "2024-12-03T10:15:22Z",
+      "count": 3
+    }
+  ],
+  "ownerReferences": [
+    {
+      "kind": "ReplicaSet",
+      "name": "nginx-deployment-7d9c8f5b4",
+      "uid": "x1y2z3a4-b5c6-7d8e-9f0g-h1i2j3k4l5m6"
+    }
+  ],
+  "qosClass": "Burstable",
+  "podIP": "10.244.0.5",
+  "hostIP": "192.168.1.10",
+  "createdAt": "2024-12-02T14:30:00Z"
+}
+```
+
+### Required Fields by UI Section
+
+#### Overview Tab - Status Section
+
+| Field Name | Data Type | Required | Where Shown in UI  | Description                      | Example Values                           |
+| ---------- | --------- | -------- | ------------------ | -------------------------------- | ---------------------------------------- |
+| `phase`    | string    | ✅ Yes   | **Phase** row      | Pod phase with status badge      | `"Running"`, `"Pending"`, `"Failed"`     |
+| `qosClass` | string    | ⚠️ Optional | **QoS Class** row | Quality of Service class         | `"Guaranteed"`, `"Burstable"`, `"BestEffort"`, `null` |
+| `nodeName` | string    | ⚠️ Optional | **Node** row with server icon | Node where pod runs | `"node-1"`, `"minikube"`, `null`         |
+| `podIP`    | string    | ⚠️ Optional | **Pod IP** row with network icon | Pod's IP address | `"10.244.0.5"`, `null`                   |
+
+#### Overview Tab - Metadata Section
+
+| Field Name  | Data Type | Required | Where Shown in UI            | Description                     | Example Values                       |
+| ----------- | --------- | -------- | ---------------------------- | ------------------------------- | ------------------------------------ |
+| `uid`       | string    | ✅ Yes   | **UID** row (copyable)       | Kubernetes UID                  | `"a1b2c3d4-e5f6-7g8h..."`            |
+| `createdAt` | string    | ✅ Yes   | **Created** row with clock icon | Pod creation timestamp (ISO 8601) | `"2024-12-02T14:30:00Z"`             |
+| [age](file:///home/arffy/playground/monitor/Microk8s-Monitor/src/app/dashboard/pods/page.tsx#15-249)       | string    | ✅ Yes   | **Age** row                  | Human-readable age              | `"4d"`, `"3h"`, `"15m"`              |
+
+#### Overview Tab - Labels Section
+
+| Field Name | Data Type                  | Required | Where Shown in UI        | Description          | Example                              |
+| ---------- | -------------------------- | -------- | ------------------------ | -------------------- | ------------------------------------ |
+| `labels`   | object (key-value pairs)   | ✅ Yes   | **Labels** section       | Pod labels as badges | `{"app": "nginx", "version": "v1"}` |
+
+**Note:** If pod has no labels, send empty object `{}`. The UI will hide the section.
+
+#### Overview Tab - Owner References Section
+
+| Field Name        | Data Type | Required  | Where Shown in UI              | Description                    |
+| ----------------- | --------- | --------- | ------------------------------ | ------------------------------ |
+| `ownerReferences` | array     | ⚠️ Optional | **Owner References** section   | Parent resources               |
+| `├─ kind`         | string    | ✅ Yes (if ownerReferences present) | Owner type badge | `"Deployment"`, `"Job"`, `"DaemonSet"`, `"StatefulSet"` |
+| `├─ name`         | string    | ✅ Yes (if ownerReferences present) | Owner name       | `"nginx-deployment"`           |
+| `└─ uid`          | string    | ✅ Yes (if ownerReferences present) | Internal use     | `"x1y2z3a4..."`                |
+
+**Note:** If pod has no owner (standalone pod), send empty array `[]` or omit field. The UI will hide the section.
+
+#### Overview Tab - Conditions Section
+
+| Field Name            | Data Type | Required | Where Shown in UI           | Description                      |
+| --------------------- | --------- | -------- | --------------------------- | -------------------------------- |
+| `conditions`          | array     | ⚠️ Optional | **Conditions** section      | Pod conditions list              |
+| `├─ type`             | string    | ✅ Yes (if conditions present) | Condition name    | `"Ready"`, `"Initialized"`, `"ContainersReady"`, `"PodScheduled"` |
+| `├─ status`           | string    | ✅ Yes (if conditions present) | Status badge (green if "True") | `"True"`, `"False"`, `"Unknown"` |
+| `├─ lastTransitionTime` | string  | ⚠️ Optional | Not shown currently         | ISO 8601 timestamp               |
+| `├─ lastProbeTime`    | string/null | ⚠️ Optional | Not shown currently       | ISO 8601 timestamp or null       |
+| `├─ reason`           | string    | ⚠️ Optional | Not shown currently         | Reason for condition             |
+| `└─ message`          | string    | ⚠️ Optional | Shown below status          | Message explaining condition     |
+
+#### Containers Tab
+
+| Field Name   | Data Type | Required | Where Shown in UI                  | Description                    |
+| ------------ | --------- | -------- | ---------------------------------- | ------------------------------ |
+| `containers` | array     | ✅ Yes   | **Containers** tab                 | List of containers             |
+| `├─ name`    | string    | ✅ Yes   | Container header with box icon     | Container name                 |
+| `├─ image`   | string    | ✅ Yes   | **Image** row                      | Container image                |
+| `├─ state`   | string    | ✅ Yes   | **State** row                      | `"running"`, `"waiting"`, `"terminated"` |
+| `├─ ready`   | boolean   | ✅ Yes   | Ready/Not Ready badge (top right)  | Container readiness            |
+| `├─ restartCount` | number | ✅ Yes | **Restart Count** row              | Number of restarts             |
+| `├─ ports`   | array     | ⚠️ Optional | **Ports** section (if present)  | Container ports                |
+| `├─ resources` | object  | ⚠️ Optional | **Resources** section (if present) | CPU/Memory requests and limits |
+
+**Container Ports Structure:**
+```json
+{
+  "ports": [
+    {
+      "name": "http",           // Optional
+      "containerPort": 80,      // Required
+      "protocol": "TCP"         // Required
+    }
+  ]
+}
+```
+
+**Container Resources Structure:**
+```json
+{
+  "resources": {
+    "requests": {
+      "cpu": "100m",      // Optional
+      "memory": "128Mi"   // Optional
+    },
+    "limits": {
+      "cpu": "200m",      // Optional
+      "memory": "256Mi"   // Optional
+    }
+  }
+}
+```
+
+**Note:** If no requests/limits, send `{}` or omit. UI shows "N/A" for missing values.
+
+#### Events Tab
+
+| Field Name  | Data Type | Required | Where Shown in UI             | Description                    |
+| ----------- | --------- | -------- | ----------------------------- | ------------------------------ |
+| `events`    | array     | ⚠️ Optional | **Events** tab                | Pod events (recent 10-20)      |
+| `├─ type`   | string    | ✅ Yes (if events present) | Event icon color (Warning=yellow, Normal=blue) | `"Normal"`, `"Warning"` |
+| `├─ reason` | string    | ✅ Yes (if events present) | Event title                | `"Scheduled"`, `"Pulled"`, `"BackOff"` |
+| `├─ message` | string   | ✅ Yes (if events present) | Event description          | `"Successfully pulled image"` |
+| `├─ timestamp` | string | ✅ Yes (if events present) | Event time (formatted)     | `"2024-12-02T14:30:14Z"` (ISO 8601) |
+| `└─ count`  | number    | ⚠️ Optional | "Count: X" if > 1             | Event occurrence count         |
+
+**Event Display Logic:**
+- `type: "Normal"` → Blue info icon
+- `type: "Warning"` → Yellow warning icon
+- Events sorted by timestamp (newest first recommended)
+
+---
+
+## 📜 Endpoint 3: GET `/api/k8s/pods/:namespace/:name/logs` - Pod Logs
+
+### URL
+```
+GET http://localhost:8001/api/k8s/pods/:namespace/:name/logs
+```
+
+### URL Parameters
+
+| Parameter   | Required | Description   | Example     |
+| ----------- | -------- | ------------- | ----------- |
+| `namespace` | ✅ Yes   | Pod namespace | `"default"` |
+| `name`      | ✅ Yes   | Pod name      | `"nginx-deployment-7d9c8f5b4-xyz12"` |
+
+### Query Parameters
+
+| Parameter      | Type    | Required | Default | Description                                  | Example          |
+| -------------- | ------- | -------- | ------- | -------------------------------------------- | ---------------- |
+| `container`    | string  | ⚠️ Conditional | First container | Container name (REQUIRED for multi-container pods) | `"nginx"`        |
+| `tailLines`    | integer | ⚠️ Optional   | 100     | Number of lines to return                    | `500`            |
+| `timestamps`   | boolean | ⚠️ Optional   | false   | Include timestamps in logs                   | `true`           |
+| `sinceSeconds` | integer | ⚠️ Optional   | -       | Get logs from last N seconds                 | `3600`           |
+
+**Note:** For multi-container pods, `container` parameter is REQUIRED. Otherwise, logs will fail or show wrong container.
+
+### Example Requests
+
+**Single container pod:**
+```
+GET /api/k8s/pods/default/nginx-pod/logs?tailLines=100&timestamps=true
+```
+
+**Multi-container pod:**
+```
+GET /api/k8s/pods/default/payment-service/logs?container=payment-service&tailLines=500&timestamps=true
+```
+
+### Response Format
+
+**HTTP 200 - Success**
+
+**Content-Type:** `text/plain` (NOT JSON - raw log text)
+
+```
+2024-12-06T14:30:15.123Z [INFO] Starting nginx service
+2024-12-06T14:30:16.456Z [INFO] Loading configuration from /etc/nginx/nginx.conf
+2024-12-06T14:30:17.789Z [INFO] Starting worker process 1
+2024-12-06T14:30:18.012Z [INFO] Starting worker process 2
+2024-12-06T14:30:19.678Z 192.168.1.50 - - [06/Dec/2024:14:30:19 +0000] "GET /health HTTP/1.1" 200 25
+2024-12-06T14:30:20.345Z [INFO] nginx ready to accept connections
+```
+
+### Required Response Format
+
+| Requirement            | Description                                                |
+| ---------------------- | ---------------------------------------------------------- |
+| **Content-Type**       | Must be `text/plain` (not JSON)                            |
+| **Format**             | Raw log text, one line per log entry                       |
+| **Line Breaks**        | Use `\n` for line breaks                                   |
+| **Timestamps**         | Include if `timestamps=true` in query params               |
+| **Timestamp Format**   | ISO 8601 format: `2024-12-06T14:30:15.123Z`                |
+| **Tail Lines**         | Honor `tailLines` parameter (last N lines)                 |
+
+### UI Display Features
+
+The frontend displays logs in a terminal-style viewer with:
+- ✅ Dark background (for readability)
+- ✅ Monospace font
+- ✅ Search highlighting (frontend feature)
+- ✅ Auto-scroll option (frontend feature)
+- ✅ Copy/download buttons (frontend feature)
+
+**Backend just needs to return plain text logs.**
+
+---
+
+## 🗑️ Endpoint 4: DELETE `/api/k8s/pods/:namespace/:name` - Delete Pod
+
+### URL
+```
+DELETE http://localhost:8001/api/k8s/pods/:namespace/:name
+```
+
+### URL Parameters
+
+| Parameter   | Required | Description   | Example     |
+| ----------- | -------- | ------------- | ----------- |
+| `namespace` | ✅ Yes   | Pod namespace | `"default"` |
+| `name`      | ✅ Yes   | Pod name      | `"nginx-deployment-7d9c8f5b4-xyz12"` |
+
+### Example Request
+```
+DELETE http://localhost:8001/api/k8s/pods/default/nginx-deployment-7d9c8f5b4-xyz12
+```
+
+### Response Format
+
+**HTTP 200 - Success**
+
+```json
+{
+  "success": true,
+  "message": "Pod deleted successfully"
+}
+```
+
+**HTTP 500 - Error**
+
+```json
+{
+  "success": false,
+  "message": "Failed to delete pod: permission denied"
+}
+```
+
+### Required Fields
+
+| Field Name | Data Type | Required | Description           | Example Values                 |
+| ---------- | --------- | -------- | --------------------- | ------------------------------ |
+| `success`  | boolean   | ✅ Yes   | Deletion status       | `true`, `false`                |
+| `message`  | string    | ✅ Yes   | Result message        | `"Pod deleted successfully"`   |
+
+---
+
+## 🔐 Authentication
+
+All endpoints require **Bearer Token** authentication:
+
+```http
+Authorization: Bearer {jwt-token}
+```
+
+The frontend automatically sends the token from `localStorage.getItem("authToken")`.
+
+**If token is missing or invalid:**
+- Return **HTTP 401 Unauthorized**
+- Response: `{"message": "Unauthorized"}`
+
+---
+
+## ❌ Error Responses
+
+All endpoints should use standard HTTP status codes and error format:
+
+### Error Status Codes
+
+| Code | Status                | When to Use                          |
+| ---- | --------------------- | ------------------------------------ |
+| 400  | Bad Request           | Invalid parameters                   |
+| 401  | Unauthorized          | Missing/invalid auth token           |
+| 403  | Forbidden             | User doesn't have permission         |
+| 404  | Not Found             | Pod doesn't exist                    |
+| 500  | Internal Server Error | Server/Kubernetes error              |
+
+### Error Response Format
+
+```json
+{
+  "message": "Pod not found in namespace default",
+  "detail": "Additional error details (optional)"
+}
+```
+
+**Required Fields:**
+- `message` (string, required) - User-friendly error message
+- `detail` (string, optional) - Technical error details
+
+---
+
+## 📝 Implementation Checklist
+
+### Endpoint 1: List Pods
+- [ ] Implement filtering by namespace
+- [ ] Implement filtering by phase
+- [ ] Implement filtering by nodeName
+- [ ] Implement filtering by labels (`label.{key}=value`)
+- [ ] Fetch CPU/Memory from Metrics Server API
+- [ ] Calculate human-readable age
+- [ ] Return empty array if no pods match filters
+
+### Endpoint 2: Pod Details
+- [ ] Fetch all required basic fields
+- [ ] Fetch labels and annotations
+- [ ] Fetch pod conditions
+- [ ] Fetch all containers with full details
+- [ ] Fetch pod events (recent 10-20 events)
+- [ ] Fetch owner references
+- [ ] Include QoS class, IPs, timestamps
+
+### Endpoint 3: Pod Logs
+- [ ] Return plain text (not JSON)
+- [ ] Support `container` parameter (for multi-container pods)
+- [ ] Support `tailLines` parameter
+- [ ] Support `timestamps` parameter
+- [ ] Support `sinceSeconds` parameter
+- [ ] Handle missing container gracefully
+
+### Endpoint 4: Delete Pod
+- [ ] Delete pod via Kubernetes API
+- [ ] Return success/error response
+- [ ] Handle errors gracefully
+
+---
+
+## ✅ Summary
+
+**Total Endpoints:** 4
+
+1. **GET /api/k8s/pods** - List with filters (10 required fields)
+2. **GET /api/k8s/pods/:namespace/:name** - Details (30+ fields across tabs)
+3. **GET /api/k8s/pods/:namespace/:name/logs** - Plain text logs
+4. **DELETE /api/k8s/pods/:namespace/:name** - Delete pod
+
+**Key Points:**
+- All endpoints require Bearer token
+- List and Details return JSON
+- Logs return plain text
+- Use ISO 8601 for all timestamps
+- Return empty arrays for optional lists if no data
+- Handle multi-container pods correctly for logs
+
+This specification provides everything needed to implement the backend correctly! 🚀

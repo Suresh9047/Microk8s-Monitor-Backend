@@ -15,6 +15,7 @@ const userRoutes = require("./users.routes");
 // const secretRoutes = require("./secrets.routes");
 const nexusRoutes = require("./nexus.routes");
 const k8sManagerRoutes = require("./k8s_manager.routes");
+const podsRoutes = require("./pods.routes");
 
 // and all other routes to be protected should be brought here.. Eg. below.
 // const plantRoutes = require('./plant.routes');
@@ -32,5 +33,6 @@ router.use("/users", userRoutes);
 // router.use("/secrets", secretRoutes);
 router.use("/nexus", nexusRoutes);
 router.use("/k8s", k8sManagerRoutes);
+router.use("/pods", podsRoutes);
 
 module.exports = router;
